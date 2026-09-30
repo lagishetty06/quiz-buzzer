@@ -7,6 +7,23 @@ import { useSocket, BuzzEntry } from '@/hooks/useSocket';
 import { sound } from '@/lib/sound';
 import { Shield, Zap, Lock, RefreshCw, Trophy, Users, Clock, Radio, Activity, CheckCircle2, Key, LogOut, User } from 'lucide-react';
 
+function formatLocalTime(ts: number): string {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const dateStr = d.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  });
+  const ms = String(d.getMilliseconds()).padStart(3, '0');
+  const parts = dateStr.split(' ');
+  if (parts.length === 2) {
+    return `${parts[0]}.${ms} ${parts[1]}`;
+  }
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}.${ms}`;
+}
+
 export default function AdminPage() {
   const { socket, connectionStatus, pingMs, joinRoom, armBuzzer, lockBuzzer, resetBuzzer } = useSocket();
 
@@ -310,8 +327,8 @@ export default function AdminPage() {
                     <Trophy className="w-4 h-4 text-amber-400 fill-amber-400" />
                     ABSOLUTE FIRST HIT (WINNER)
                   </div>
-                  <span className="font-mono text-xs text-amber-300">
-                    {new Date(winner.serverTimestamp).toISOString().slice(11, 23)}
+                  <span className="font-mono text-xs text-amber-300 font-bold">
+                    {formatLocalTime(winner.serverTimestamp)}
                   </span>
                 </div>
 
@@ -390,7 +407,7 @@ export default function AdminPage() {
                         <div>
                           <span className="font-bold text-base block text-white">{buzz.teamName}</span>
                           <span className="text-[11px] font-mono text-slate-400">
-                            {new Date(buzz.serverTimestamp).toISOString().slice(11, 23)}
+                            {formatLocalTime(buzz.serverTimestamp)}
                           </span>
                         </div>
                       </div>
