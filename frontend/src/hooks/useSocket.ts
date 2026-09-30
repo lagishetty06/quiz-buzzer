@@ -22,20 +22,28 @@ export interface RoomState {
 
 export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'reconnecting';
 
+const RENDER_BACKEND_URL = 'https://quiz-buzzer-cwjh.onrender.com';
+
 function getSocketUrl(): string {
-  if (process.env.NEXT_PUBLIC_SOCKET_URL && process.env.NEXT_PUBLIC_SOCKET_URL !== 'http://localhost:4000') {
+  if (process.env.NEXT_PUBLIC_SOCKET_URL) {
     return process.env.NEXT_PUBLIC_SOCKET_URL;
   }
   
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
+
+    // If running on Vercel Cloud production site
+    if (hostname.endsWith('.vercel.app')) {
+      return RENDER_BACKEND_URL;
+    }
+
     // If opening on phone or local network IP (e.g. 192.168.x.x)
-    if (hostname !== 'localhost' && hostname !== '127.0.0.1' && !hostname.endsWith('.vercel.app')) {
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
       return `http://${hostname}:4000`;
     }
   }
 
-  return process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
+  return RENDER_BACKEND_URL;
 }
 
 export function useSocket() {
