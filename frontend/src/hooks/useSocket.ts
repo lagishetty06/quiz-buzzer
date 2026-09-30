@@ -22,7 +22,21 @@ export interface RoomState {
 
 export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'reconnecting';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
+function getSocketUrl(): string {
+  if (process.env.NEXT_PUBLIC_SOCKET_URL && process.env.NEXT_PUBLIC_SOCKET_URL !== 'http://localhost:4000') {
+    return process.env.NEXT_PUBLIC_SOCKET_URL;
+  }
+  
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    // If opening on phone or local network IP (e.g. 192.168.x.x)
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1' && !hostname.endsWith('.vercel.app')) {
+      return `http://${hostname}:4000`;
+    }
+  }
+
+  return process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
+}
 
 export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
@@ -30,7 +44,10 @@ export function useSocket() {
   const [pingMs, setPingMs] = useState<number | null>(null);
 
   useEffect(() => {
-    const socket = io(SOCKET_URL, {
+    const targetUrl = getSocketUrl();
+    console.log('🔗 [Socket] Connecting to backend server:', targetUrl);
+
+    const socket = io(targetUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: Infinity,
