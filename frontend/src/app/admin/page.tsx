@@ -5,7 +5,7 @@ import confetti from 'canvas-confetti';
 import { Header } from '@/components/Header';
 import { useSocket, BuzzEntry } from '@/hooks/useSocket';
 import { sound } from '@/lib/sound';
-import { Shield, Zap, Lock, RefreshCw, Trophy, Users, Clock, Radio, Activity, CheckCircle2 } from 'lucide-react';
+import { Shield, Zap, Lock, RefreshCw, Trophy, Users, Clock, Radio, Activity, CheckCircle2, Key, LogOut, User } from 'lucide-react';
 
 function formatLocalTime(ts: number): string {
   if (!ts) return '';
@@ -27,6 +27,12 @@ function formatLocalTime(ts: number): string {
 export default function AdminPage() {
   const { socket, connectionStatus, pingMs, joinRoom, armBuzzer, lockBuzzer, resetBuzzer } = useSocket();
 
+  // Admin Auth State
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [adminUsername, setAdminUsername] = useState<string>('');
+  const [adminPassword, setAdminPassword] = useState<string>('');
+  const [authError, setAuthError] = useState<string | null>(null);
+
   // Room & State
   const [roomId, setRoomId] = useState('ROOM-1');
   const [buzzerState, setBuzzerState] = useState<'active' | 'locked'>('locked');
@@ -38,9 +44,37 @@ export default function AdminPage() {
   const [connectedSockets, setConnectedSockets] = useState<number>(0);
   const [participantsList, setParticipantsList] = useState<string[]>([]);
 
-  // Join Room as Admin
+  // Check persistent login session on load
   useEffect(() => {
-    if (!socket) return;
+    const savedAuth = sessionStorage.getItem('admin_authenticated');
+    if (savedAuth === 'true') {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  // Admin Login Handler
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const validUsername = process.env.NEXT_PUBLIC_ADMIN_USERNAME || 'admin';
+    const validPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'saicharan@123';
+
+    if (adminUsername.trim() === validUsername && adminPassword.trim() === validPassword) {
+      setIsAuthenticated(true);
+      sessionStorage.setItem('admin_authenticated', 'true');
+      setAuthError(null);
+    } else {
+      setAuthError('Invalid Admin Username or Password.');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    sessionStorage.removeItem('admin_authenticated');
+  };
+
+  // Join Room as Admin when authenticated
+  useEffect(() => {
+    if (!socket || !isAuthenticated) return;
 
     joinRoom(roomId, 'admin').then((res) => {
       if (res.success && res.roomState) {
@@ -108,12 +142,85 @@ export default function AdminPage() {
       socket.off('buzzer_reset', handleBuzzerReset);
       socket.off('room_stats', handleRoomStats);
     };
-  }, [socket, roomId, joinRoom]);
+  }, [socket, roomId, joinRoom, isAuthenticated]);
 
   // Action Button Handlers
   const handleActivate = () => armBuzzer(roomId);
   const handleLock = () => lockBuzzer(roomId);
   const handleReset = () => resetBuzzer(roomId);
+
+  // If NOT authenticated, render Admin Login Modal
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex flex-col justify-between">
+        <Header connectionStatus={connectionStatus} pingMs={pingMs} role="admin" />
+
+        <main className="flex-1 max-w-md w-full mx-auto px-4 py-12 flex flex-col justify-center">
+          <div className="glass-panel p-8 rounded-3xl border border-slate-700/60 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-28 h-28 bg-amber-500/10 rounded-full blur-xl"></div>
+
+            <div className="text-center mb-8">
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto mb-3">
+                <Shield className="w-7 h-7" />
+              </div>
+              <h2 className="text-2xl font-extrabold text-white">Admin Portal Access</h2>
+              <p className="text-xs text-slate-400 mt-1">Enter your admin credentials to unlock host controls</p>
+            </div>
+
+            {authError && (
+              <div className="mb-6 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+                <Key className="w-4 h-4 shrink-0" />
+                <span>{authError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleAdminLogin} className="space-y-5">
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-300 mb-1.5 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-amber-400" />
+                  Admin Username
+                </label>
+                <input
+                  type="text"
+                  value={adminUsername}
+                  onChange={(e) => setAdminUsername(e.target.value)}
+                  placeholder="Enter admin username"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-900/80 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-300 mb-1.5 flex items-center gap-1.5">
+                  <Key className="w-3.5 h-3.5 text-amber-400" />
+                  Admin Password
+                </label>
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="Enter admin password"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-900/80 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-500 hover:from-amber-500 hover:to-yellow-400 text-slate-950 font-black text-sm tracking-wide shadow-lg shadow-amber-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 uppercase"
+              >
+                UNLOCK ADMIN DASHBOARD →
+              </button>
+            </form>
+          </div>
+        </main>
+
+        <footer className="text-center py-6 text-xs text-slate-500">
+          Quiz Buzzer Admin Security Portal
+        </footer>
+      </div>
+    );
+  }
 
   // Authenticated Admin Control Center Screen
   return (
@@ -152,6 +259,16 @@ export default function AdminPage() {
                 className="w-28 bg-transparent text-amber-400 font-mono font-bold text-sm focus:outline-none tracking-wider uppercase"
               />
             </div>
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="p-2.5 rounded-2xl glass-button text-slate-400 hover:text-rose-400 transition-colors flex items-center gap-1.5 text-xs font-semibold"
+              title="Logout Admin"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
           </div>
         </div>
 
