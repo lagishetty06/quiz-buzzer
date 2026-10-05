@@ -8,10 +8,10 @@ import { AdminActionPayload, BuzzPayload, JoinRoomPayload } from './types';
 
 dotenv.config();
 
-const PORT = process.env.PORT || 4000;
+const PORT = Number(process.env.PORT) || 4000;
 const app = express();
 
-app.use(cors());
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 // Health check & Metrics endpoint
@@ -222,9 +222,9 @@ io.on('connection', (socket: Socket) => {
   });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`
-🚀 Quiz Buzzer High-Concurrency Server running on http://localhost:${PORT}
+🚀 Quiz Buzzer Server listening on ALL network interfaces (0.0.0.0:${PORT})
 ⚡ Socket.io listening for events...
   `);
 });

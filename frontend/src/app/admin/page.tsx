@@ -212,10 +212,6 @@ export default function AdminPage() {
                 UNLOCK ADMIN DASHBOARD →
               </button>
             </form>
-
-            <div className="mt-6 text-center text-[11px] text-slate-500 border-t border-slate-800 pt-4">
-              Default Credentials: <span className="font-mono text-amber-400/80">admin</span> / <span className="font-mono text-amber-400/80">quizadmin123</span>
-            </div>
           </div>
         </main>
 
